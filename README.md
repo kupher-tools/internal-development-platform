@@ -1,4 +1,3 @@
----
 # Internal Developer Platform (IDP)
 
 A cloud-native Internal Developer Platform (IDP) built in Golang to provide self-service APIs for platform engineering workflows.
