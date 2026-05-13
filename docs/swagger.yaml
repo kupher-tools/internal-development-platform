@@ -1,0 +1,93 @@
+basePath: /
+definitions:
+  domain.RepoRequest:
+    properties:
+      description:
+        type: string
+      isPrivate:
+        type: boolean
+      name:
+        type: string
+    type: object
+  domain.RepoResponse:
+    properties:
+      name:
+        type: string
+      type:
+        description: e.g., "docker", "helm"
+        type: string
+      uri:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Platform for managing internal engineering resources.
+  title: Internal Development Platform API
+  version: "1.0"
+paths:
+  /api/v1/container-repositories:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new container repository
+      parameters:
+      - description: Create container repository
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.RepoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.RepoResponse'
+      summary: Create Container Repository
+      tags:
+      - repository
+  /health/live:
+    get:
+      description: Returns the health status of the instance
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get Liveness
+      tags:
+      - health
+  /health/ready:
+    get:
+      description: Returns the health status of the instance
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get Readiness
+      tags:
+      - health
+swagger: "2.0"

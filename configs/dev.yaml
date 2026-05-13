@@ -1,0 +1,7 @@
+server:
+  port: ":8080"
+
+containerRepo:
+  url: "https://hub.docker.com"
+  username: "rajeshd2090"
+  password: "provide-securly"
