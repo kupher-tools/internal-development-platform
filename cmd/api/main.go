@@ -5,7 +5,9 @@ import (
 	"log/slog"
 	"net/http"
 
+	"internal-development-platform/internal/persistence"
 	"internal-development-platform/internal/routes"
+	"internal-development-platform/reconciler"
 
 	_ "internal-development-platform/docs"
 
@@ -31,9 +33,19 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	postgresClient, err := persistence.NewPostgres(cfg.Postgres)
+
+	if err != nil {
+		panic(err)
+	}
+
+	defer postgresClient.Close()
+
+	go reconciler.Manager()
+
 	server := &http.Server{
 		Addr:    cfg.Server.Port,
-		Handler: routes.SetupRoutes(cfg),
+		Handler: routes.SetupRoutes(cfg, postgresClient),
 	}
 	slog.Info("Starting server", "port", cfg.Server.Port)
 

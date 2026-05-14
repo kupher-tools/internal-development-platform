@@ -4,6 +4,7 @@ import (
 	"internal-development-platform/internal/config"
 	"internal-development-platform/internal/handler"
 	"internal-development-platform/internal/middleware"
+	"internal-development-platform/internal/persistence"
 	"internal-development-platform/internal/service"
 	"net/http"
 
@@ -11,13 +12,18 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
-func SetupRoutes(cfg *config.Config) http.Handler {
+func SetupRoutes(cfg *config.Config, postgresClient *persistence.Postgres) http.Handler {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logging)
 
+	containerRepoStore :=
+		persistence.NewContainerRepositoryStore(
+			postgresClient.DB,
+		)
+
 	healthSvc := service.NewHealthService("3.1.2")
-	containerRepoSvc := service.NewContainerRepoService(cfg.ContainerRepo)
+	containerRepoSvc := service.NewContainerRepoService(cfg.ContainerRepo, containerRepoStore)
 
 	healthHandler := handler.NewHealthHandler(healthSvc)
 	containerRepoHandler := handler.NewContainerRepoHandler(containerRepoSvc)

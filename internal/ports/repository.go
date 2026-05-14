@@ -6,5 +6,12 @@ import (
 )
 
 type ContainerRepoService interface {
-	CreateRepository(ctx context.Context, repoRequest domain.RepoRequest) (*domain.RepoResponse, error)
+	CreateRepository(ctx context.Context, repoRequest domain.CreateContainerRepositoryRequest) (*domain.RepoResponse, error)
+}
+
+type ContainerRepositoryStore interface {
+	Create(
+		ctx context.Context,
+		repo domain.ContainerRepository,
+	) error
 }

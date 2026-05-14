@@ -1,68 +1,130 @@
 package service
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"internal-development-platform/internal/config"
 	"internal-development-platform/internal/domain"
 	appErrors "internal-development-platform/internal/errors"
-	"net/http"
-	"time"
+	"internal-development-platform/internal/ports"
+	"log/slog"
+
+	"github.com/google/uuid"
 )
 
 type ContainerRepoService struct {
 	containerRepo config.ContainerRepo
+	store         ports.ContainerRepositoryStore
 }
 
-func NewContainerRepoService(containerRepo config.ContainerRepo) *ContainerRepoService {
+func NewContainerRepoService(containerRepo config.ContainerRepo, store ports.ContainerRepositoryStore) *ContainerRepoService {
+
 	return &ContainerRepoService{
 		containerRepo: containerRepo,
+		store:         store,
 	}
 }
 
-func (s *ContainerRepoService) CreateRepository(ctx context.Context, repoRequest domain.RepoRequest) (*domain.RepoResponse, error) {
-	if repoRequest.Name == "" {
+func (s *ContainerRepoService) CreateRepository(
+	ctx context.Context,
+	req domain.CreateContainerRepositoryRequest,
+) (*domain.RepoResponse, error) {
+
+	if req.Name == "" {
 		return nil, appErrors.ErrInternal
 	}
 
-	password := s.containerRepo.Password
+	visibility := "public"
 
-	username := s.containerRepo.Username
+	if req.IsPrivate {
+		visibility = "private"
+	}
 
-	token, err := getDockerHubJWT(ctx, password, username)
+	repo := domain.ContainerRepository{
+		ID:          uuid.New(),
+		Name:        req.Name,
+		Description: req.Description,
+		Provider:    "harbor",
+		Visibility:  visibility,
+
+		DesiredState: "present",
+		ActualState:  "pending",
+		Status:       "pending",
+
+		Generation:         1,
+		ObservedGeneration: 0,
+	}
+
+	err := s.store.Create(ctx, repo)
 	if err != nil {
+		slog.Error("Err", "err", err)
 		return nil, appErrors.ErrInternal
 	}
 
-	uri := fmt.Sprintf("%s/v2/namespaces/%s/repositories", s.containerRepo.URL, username)
-	payload := repoRequest
+	return &domain.RepoResponse{
+		ID:     repo.ID.String(),
+		Name:   repo.Name,
+		Status: repo.Status,
+	}, nil
+}
 
-	body, err := json.Marshal(payload)
-	if err != nil {
+/*
+func (s *ContainerRepoService) CreateRepository(ctx context.Context, req domain.CreateContainerRepositoryRequest) (*domain.RepoResponse, error) {
+	if req.Name == "" {
 		return nil, appErrors.ErrInternal
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", uri, bytes.NewBuffer(body))
-	if err != nil {
-		return nil, appErrors.ErrInternal
+	visibility := "public"
+	if req.IsPrivate {
+		visibility = "private"
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "JWT "+token)
-
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, appErrors.ErrInternal
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated {
-		return nil, appErrors.ErrInternal
+	repo := domain.ContainerRepository{
+		ID:                 uuid.New(),
+		Name:               req.Name,
+		Description:        req.Description,
+		Provider:           "harbor",
+		Visibility:         visibility,
+		DesiredState:       "present",
+		Status:             "pending",
+		Generation:         1,
+		ObservedGeneration: 0,
 	}
 
-	return domain.NewRepository(repoRequest.Name, uri), nil
+		password := s.containerRepo.Password
+
+		username := s.containerRepo.Username
+
+		token, err := getDockerHubJWT(ctx, password, username)
+		if err != nil {
+			return nil, appErrors.ErrInternal
+		}
+
+		uri := fmt.Sprintf("%s/v2/namespaces/%s/repositories", s.containerRepo.URL, username)
+		payload := repoRequest
+
+		body, err := json.Marshal(payload)
+		if err != nil {
+			return nil, appErrors.ErrInternal
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", uri, bytes.NewBuffer(body))
+		if err != nil {
+			return nil, appErrors.ErrInternal
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "JWT "+token)
+
+		client := &http.Client{Timeout: 15 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, appErrors.ErrInternal
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusCreated {
+			return nil, appErrors.ErrInternal
+		}
+
+		return domain.NewRepository(repoRequest.Name, uri), nil
 }
 
 func getDockerHubJWT(ctx context.Context, username, pat string) (string, error) {
@@ -108,3 +170,4 @@ func getDockerHubJWT(ctx context.Context, username, pat string) (string, error) 
 
 	return result.Token, nil
 }
+*/
